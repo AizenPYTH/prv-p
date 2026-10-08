@@ -75,13 +75,14 @@ function PageView({
         const modified = f.value !== f.original;
         const selected = f.id === selectedId;
         const editing = f.id === editingId;
+        const lineH = Math.max(f.h, f.fontSize * 1.15) * scale;
         const style: React.CSSProperties = {
           left: f.x * scale,
           top: f.y * scale,
           minWidth: f.w * scale,
-          height: f.h * scale,
+          height: lineH,
           fontSize: f.fontSize * scale,
-          lineHeight: `${f.h * scale}px`,
+          lineHeight: `${lineH}px`,
           fontWeight: f.bold ? 700 : 400,
           fontFamily: "Helvetica, Arial, sans-serif",
           backgroundColor: modified || editing ? f.bg : undefined,

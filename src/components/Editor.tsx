@@ -7,6 +7,7 @@ import { ocrCanvas } from "@/lib/ocr";
 import { aiAvailable, classifySegments, contactUpdates } from "@/lib/ai";
 import { exportPdf, downloadBytes } from "@/lib/exportPdf";
 import { storage } from "@/lib/storage";
+import { APP_VERSION } from "@/lib/version";
 import DocumentView from "./DocumentView";
 import FieldPanel from "./FieldPanel";
 import AssistantPanel from "./AssistantPanel";
@@ -221,7 +222,11 @@ export default function Editor() {
 
   const addFieldAt = (page: number, x: number, y: number) => {
     if (!doc) return;
-    const fontSize = doc.kind === "pdf" ? 11 : Math.max(14, doc.pages[page].width / 60);
+    // Use the font size of the closest existing zone on this page so the new text matches the document.
+    const near = doc.fields
+      .filter((f) => f.page === page)
+      .sort((p, q) => Math.hypot(p.x - x, p.y - y) - Math.hypot(q.x - x, q.y - y))[0];
+    const fontSize = near?.fontSize ?? (doc.kind === "pdf" ? 11 : Math.max(14, doc.pages[page].width / 60));
     const field: Field = {
       id: uid("f"),
       page,
@@ -384,7 +389,7 @@ export default function Editor() {
           </div>
         )}
         <p className="text-[11px] text-gray-400">
-          IA : {aiOn ? "Claude (clé configurée)" : "mode local (ajoute ANTHROPIC_API_KEY pour activer Claude)"} · N&apos;utilise cet outil que sur des documents que tu es autorisé à modifier.
+          v{APP_VERSION} · IA : {aiOn ? "Claude (clé configurée)" : "mode local (ajoute ANTHROPIC_API_KEY pour activer Claude)"} · N&apos;utilise cet outil que sur des documents que tu es autorisé à modifier.
         </p>
       </main>
     );
@@ -394,7 +399,7 @@ export default function Editor() {
     <main className="flex h-screen flex-col bg-gray-100">
       <header className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2">
         <button className="font-semibold hover:text-blue-700" title="Retour à l'accueil" onClick={() => setDoc(null)}>
-          Smart Document Editor
+          Smart Document Editor <span className="text-[10px] font-normal text-gray-400">v{APP_VERSION}</span>
         </button>
         <span className="truncate text-sm text-gray-500">{doc.name}</span>
         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">

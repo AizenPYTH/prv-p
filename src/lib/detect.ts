@@ -138,9 +138,9 @@ export function detectFields(segments: TextSegment[]): Field[] {
           (o) =>
             o.id !== seg.id &&
             !consumed.has(o.id) &&
-            Math.abs(o.y + o.h / 2 - (seg.y + seg.h / 2)) < seg.h * 0.6 &&
+            Math.abs(o.y + o.h / 2 - (seg.y + seg.h / 2)) < seg.h * 0.9 &&
             o.x >= seg.x + seg.w - seg.h * 0.2 &&
-            o.x - (seg.x + seg.w) < seg.h * 20,
+            o.x - (seg.x + seg.w) < seg.h * 40,
         )
         .sort((a, b) => a.x - b.x)[0];
       const below = right

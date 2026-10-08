@@ -81,6 +81,30 @@ export default function FieldPanel({ fields, selected, savedValues, onSelect, on
         <span className="text-[11px] text-gray-500">Original : {selected.original || "—"}</span>
       </label>
 
+      <div className="flex gap-3">
+        <label className="label flex-1">
+          Taille du texte
+          <input
+            className="input"
+            type="number"
+            min={4}
+            max={200}
+            step={0.5}
+            value={Math.round(selected.fontSize * 10) / 10}
+            onChange={(e) => {
+              const v = parseFloat(e.target.value);
+              if (Number.isFinite(v) && v > 0) onChange(selected.id, { fontSize: v });
+            }}
+          />
+        </label>
+        <label className="label flex-1">
+          Style
+          <span className="flex h-[34px] items-center gap-2 text-sm text-gray-800">
+            <input type="checkbox" checked={!!selected.bold} onChange={(e) => onChange(selected.id, { bold: e.target.checked })} /> Gras
+          </span>
+        </label>
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <button className="btn-primary" disabled={!selected.value.trim()} onClick={() => onSaveValue(selected.label, selected.value)}>
           Enregistrer cette valeur

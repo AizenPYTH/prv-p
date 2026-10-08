@@ -30,7 +30,7 @@ function drawField(page: PDFPage, f: Field, fonts: { regular: PDFFont; bold: PDF
   // Always keep the original font size: the value must look like the text it replaces.
   const size = f.fontSize * scale;
   const boxW = f.w * scale;
-  const boxH = f.h * scale;
+  const boxH = Math.max(f.h, f.fontSize * 1.15) * scale;
   const textW = font.widthOfTextAtSize(text, size);
   const x = f.x * scale;
   const top = pageHeight - f.y * scale; // PDF origin is bottom-left
