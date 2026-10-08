@@ -81,8 +81,12 @@ function cleanLabel(raw: string): string {
   return raw.replace(/[:：\s]+$/g, "").replace(/^[\s•\-–]+/, "").trim();
 }
 
+/** Accents break `\b` in JS regexes ("Émetteur"), so rules are tested on a de-accented copy too. */
+const deaccent = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
 function typeFromLabel(label: string): FieldType | null {
-  for (const rule of LABEL_RULES) if (rule.re.test(label)) return rule.type;
+  const plain = deaccent(label);
+  for (const rule of LABEL_RULES) if (rule.re.test(label) || rule.re.test(plain)) return rule.type;
   return null;
 }
 
