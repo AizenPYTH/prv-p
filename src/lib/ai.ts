@@ -1,7 +1,7 @@
 "use client";
 import type { ChatMessage, Contact, Field, FieldType, SavedValues, TextSegment } from "./types";
 import { FIELD_TYPE_LABELS, labelKey, uid } from "./types";
-import { detectFields, guessType } from "./detect";
+import { detectFields, finalizeFields, guessType } from "./detect";
 import { textRange } from "./text";
 
 let aiStatus: Promise<boolean> | null = null;
@@ -54,10 +54,10 @@ export async function classifySegments(segments: TextSegment[]): Promise<{ field
         fontSize: seg.fontSize,
         bold: seg.bold,
         bg: "#ffffff",
+        segmentId: seg.id,
       });
     }
-    fields.sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
-    return { fields, source: "ai" };
+    return { fields: finalizeFields(fields, segments), source: "ai" };
   } catch {
     return { fields: heuristic, source: "heuristic" };
   }

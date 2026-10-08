@@ -40,6 +40,7 @@ export default function Editor() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("field");
   const [addMode, setAddMode] = useState(false);
+  const [showAll, setShowAll] = useState(true);
   const [aiOn, setAiOn] = useState(false);
   const [source, setSource] = useState<"ai" | "heuristic" | "template" | null>(null);
   const [savedValues, setSavedValues] = useState<SavedValues>({});
@@ -57,6 +58,9 @@ export default function Editor() {
   }, []);
 
   const selected = doc?.fields.find((f) => f.id === selectedId) ?? null;
+  /** Generic text zones can be hidden; classified and edited zones always show. */
+  const visibleFields = doc ? doc.fields.filter((f) => showAll || !f.generic || f.value !== f.original) : [];
+  const classifiedCount = doc ? doc.fields.filter((f) => !f.generic).length : 0;
 
   /* ---------- import ---------- */
 
@@ -144,7 +148,14 @@ export default function Editor() {
   /* ---------- fields ---------- */
 
   const patchField = (id: string, patch: Partial<Field>) =>
-    setDoc((d) => d && { ...d, fields: d.fields.map((f) => (f.id === id ? { ...f, ...patch } : f)) });
+    setDoc(
+      (d) =>
+        d && {
+          ...d,
+          // Renaming or retyping a generic zone turns it into a real field.
+          fields: d.fields.map((f) => (f.id === id ? { ...f, ...patch, ...("label" in patch || "type" in patch ? { generic: false } : {}) } : f)),
+        },
+    );
 
   const applyUpdates = (updates: { id: string; value: string }[]) =>
     setDoc((d) => d && { ...d, fields: d.fields.map((f) => ({ ...f, value: updates.find((u) => u.id === f.id)?.value ?? f.value })) });
@@ -313,10 +324,14 @@ export default function Editor() {
         <span className="font-semibold">Smart Document Editor</span>
         <span className="truncate text-sm text-gray-500">{doc.name}</span>
         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
-          {doc.fields.length} champs · {source === "ai" ? "Claude" : source === "template" ? "modèle" : "détection locale"}
+          {classifiedCount} champs reconnus · {doc.fields.length} zones · {source === "ai" ? "Claude" : source === "template" ? "modèle" : "détection locale"}
         </span>
         <div className="ml-auto flex items-center gap-2">
           {status && <span className="text-sm text-blue-600">{status}</span>}
+          <label className="flex items-center gap-1 text-xs text-gray-600">
+            <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+            Tout le texte modifiable
+          </label>
           <button className={`btn ${addMode ? "!border-blue-500 !bg-blue-50" : ""}`} onClick={() => setAddMode((v) => !v)}>
             {addMode ? "Clique sur le document…" : "Ajouter une zone"}
           </button>
@@ -334,7 +349,7 @@ export default function Editor() {
       <div className="flex min-h-0 flex-1">
         <section className="min-w-0 flex-1 overflow-auto">
           <DocumentView
-            doc={doc}
+            doc={{ ...doc, fields: visibleFields }}
             selectedId={selectedId}
             addMode={addMode}
             onSelect={(id) => {
@@ -349,7 +364,7 @@ export default function Editor() {
         <aside className="flex w-[360px] shrink-0 flex-col border-l border-gray-200 bg-white p-4">
           {tab === "field" && (
             <FieldPanel
-              fields={doc.fields}
+              fields={visibleFields}
               selected={selected}
               savedValues={savedValues}
               onSelect={setSelectedId}
@@ -362,7 +377,7 @@ export default function Editor() {
           {tab === "assistant" && (
             <AssistantPanel
               docId={doc.id}
-              fields={doc.fields}
+              fields={doc.fields.filter((f) => !f.generic || f.value !== f.original)}
               savedValues={savedValues}
               contacts={contacts}
               aiOn={aiOn}

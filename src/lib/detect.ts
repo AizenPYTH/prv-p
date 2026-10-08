@@ -189,10 +189,7 @@ export function detectFields(segments: TextSegment[]): Field[] {
     }
   }
 
-  // Build fields, reading order
-  const fields: Field[] = candidates
-    .sort((a, b) => a.seg.page - b.seg.page || a.seg.y - b.seg.y || a.seg.x - b.seg.x || a.start - b.start)
-    .map((c) => {
+  const fields: Field[] = candidates.map((c) => {
       const { x, w } = textRange(c.seg, c.start, c.end);
       const original = c.seg.text.slice(c.start, c.end).trim();
       return {
@@ -209,10 +206,41 @@ export function detectFields(segments: TextSegment[]): Field[] {
         fontSize: c.seg.fontSize,
         bold: c.seg.bold,
         bg: "#ffffff",
+        segmentId: c.seg.id,
       };
     });
 
-  return dedupeLabels(fields);
+  return finalizeFields(fields, segments);
+}
+
+/**
+ * Makes every remaining text segment an editable "Texte" zone, so nothing on
+ * the document is left uneditable, then sorts in reading order and makes
+ * labels unique.
+ */
+export function finalizeFields(classified: Field[], segments: TextSegment[]): Field[] {
+  const used = new Set(classified.map((f) => f.segmentId));
+  const leftovers: Field[] = segments
+    .filter((s) => !used.has(s.id))
+    .map((s) => ({
+      id: uid("f"),
+      page: s.page,
+      label: "Texte",
+      type: "text" as const,
+      original: s.text,
+      value: s.text,
+      x: s.x,
+      y: s.y,
+      w: Math.max(s.w, s.fontSize),
+      h: s.h,
+      fontSize: s.fontSize,
+      bold: s.bold,
+      bg: "#ffffff",
+      segmentId: s.id,
+      generic: true,
+    }));
+  const all = [...classified, ...leftovers].sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+  return dedupeLabels(all);
 }
 
 /** Guess a type from the value text alone. */

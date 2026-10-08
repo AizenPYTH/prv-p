@@ -115,8 +115,14 @@ function PageView({
             }}
             style={style}
             className={`absolute z-10 cursor-pointer whitespace-nowrap px-0 text-[#141414] transition-shadow ${
-              selected ? "ring-2 ring-blue-600" : modified ? "ring-1 ring-emerald-500/70" : "ring-1 ring-blue-400/70 hover:ring-blue-600"
-            } ${modified ? "" : "bg-blue-400/10 hover:bg-blue-400/20"}`}
+              selected
+                ? "ring-2 ring-blue-600"
+                : modified
+                  ? "ring-1 ring-emerald-500/70"
+                  : f.generic
+                    ? "ring-1 ring-gray-400/40 hover:ring-blue-600"
+                    : "ring-1 ring-blue-400/70 hover:ring-blue-600"
+            } ${modified ? "" : f.generic ? "bg-gray-400/5 hover:bg-blue-400/20" : "bg-blue-400/10 hover:bg-blue-400/20"}`}
           >
             {modified ? f.value : ""}
           </div>
