@@ -26,6 +26,13 @@ L'outil est générique : il ne connaît aucun document en particulier. Utilise-
 
 Les valeurs enregistrées et contacts sont dans le `localStorage` ; les documents et modèles (avec le fichier) dans IndexedDB du navigateur. Pas de base de données serveur.
 
+### Retrouver ses fichiers sur un autre ordinateur
+
+Onglet **Sauvegarde / Sync** (ou bouton sur l'accueil) :
+
+- **Sauvegarde fichier** : « Exporter tout » télécharge un `.json` (documents, modèles, contacts, valeurs). « Importer un fichier » le recharge ailleurs. Aucune configuration.
+- **Synchronisation cloud** : connecte un store **Vercel Blob** au projet (Vercel → Storage → Create → Blob), la variable `BLOB_READ_WRITE_TOKEN` est ajoutée automatiquement. Choisis ensuite un code de synchronisation (6 caractères minimum) : « Envoyer vers le cloud » sur un PC, « Récupérer depuis le cloud » sur l'autre. Les fichiers sont stockés en blobs privés sous un chemin dérivé du SHA-256 du code ; quiconque connaît le code accède à l'espace.
+
 ## Lancer
 
 ```bash
@@ -46,6 +53,8 @@ Next.js (App Router) · TypeScript · Tailwind · PDF.js · Tesseract.js · pdf-
 src/app/api/status      → l'IA serveur est-elle configurée ?
 src/app/api/classify    → classification des segments par Claude (sortie JSON structurée)
 src/app/api/assistant   → assistant conversationnel (Claude)
+src/app/api/sync        → synchronisation cloud (Vercel Blob : liste, lecture, jetons d'upload, suppression)
+src/lib/sync.ts         → sauvegarde fichier + client de synchronisation
 src/lib/pdf.ts          → rendu des pages + extraction du texte positionné (PDF.js)
 src/lib/ocr.ts          → OCR Tesseract pour images / scans
 src/lib/detect.ts       → détection heuristique des champs

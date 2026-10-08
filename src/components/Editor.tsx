@@ -14,8 +14,10 @@ import AssistantPanel from "./AssistantPanel";
 import ContactsPanel from "./ContactsPanel";
 import TemplatesPanel from "./TemplatesPanel";
 import DocumentsPanel, { formatDate } from "./DocumentsPanel";
+import SyncPanel, { type LibraryData } from "./SyncPanel";
+import { cloudAvailable, loadSyncCode, removeRemote } from "@/lib/sync";
 
-type Tab = "field" | "assistant" | "contacts" | "templates" | "documents";
+type Tab = "field" | "assistant" | "contacts" | "templates" | "documents" | "sync";
 
 const readFile = (file: File) =>
   Promise.all([
@@ -49,6 +51,7 @@ export default function Editor() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [documents, setDocuments] = useState<SavedDoc[]>([]);
+  const [homeSync, setHomeSync] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -195,10 +198,49 @@ export default function Editor() {
     }
   };
 
+  /** Also removes the cloud copy when a sync code is set, so a later pull does not bring it back. */
+  const deleteRemote = async (kind: "documents" | "templates", id: string) => {
+    const code = loadSyncCode();
+    if (code.trim().length >= 6 && (await cloudAvailable())) await removeRemote(code, kind, id).catch(() => undefined);
+  };
+
   const deleteDocument = async (id: string) => {
     await storage.deleteDocument(id).catch(() => undefined);
     setDocuments((list) => list.filter((d) => d.id !== id));
+    void deleteRemote("documents", id);
   };
+
+  /** Merges a backup or a cloud pull into the local library (newest wins, nothing is lost). */
+  const restoreAll = async (data: LibraryData) => {
+    const docsById = new Map(documents.map((d) => [d.id, d]));
+    for (const d of data.documents) {
+      const local = docsById.get(d.id);
+      if (!local || d.updatedAt > local.updatedAt) {
+        await storage.putDocument(d);
+        docsById.set(d.id, d);
+      }
+    }
+    const tplById = new Map(templates.map((t) => [t.id, t]));
+    for (const t of data.templates) {
+      if (!tplById.has(t.id)) {
+        await storage.putTemplate(t);
+        tplById.set(t.id, t);
+      }
+    }
+    const byDate = (a: { updatedAt?: number; createdAt?: number }, b: { updatedAt?: number; createdAt?: number }) =>
+      (b.updatedAt ?? b.createdAt ?? 0) - (a.updatedAt ?? a.createdAt ?? 0);
+    setDocuments([...docsById.values()].sort(byDate));
+    setTemplates([...tplById.values()].sort(byDate));
+    const contactsById = new Map(contacts.map((c) => [c.id, c]));
+    for (const c of data.contacts) contactsById.set(c.id, c);
+    updateContacts([...contactsById.values()]);
+    const values: SavedValues = { ...savedValues };
+    for (const [k, list] of Object.entries(data.values)) values[k] = Array.from(new Set([...(values[k] ?? []), ...list])).slice(0, 20);
+    setSavedValues(values);
+    storage.saveValues(values);
+  };
+
+  const libraryData: LibraryData = { documents, templates, contacts, values: savedValues };
 
   /* ---------- fields ---------- */
 
@@ -282,6 +324,7 @@ export default function Editor() {
   const deleteTemplate = async (id: string) => {
     await storage.deleteTemplate(id).catch(() => undefined);
     setTemplates((list) => list.filter((t) => t.id !== id));
+    void deleteRemote("templates", id);
   };
 
   const saveTemplate = async () => {
@@ -391,6 +434,16 @@ export default function Editor() {
             </ul>
           </div>
         )}
+        <div className="w-full max-w-md">
+          <button className="btn w-full" onClick={() => setHomeSync((v) => !v)}>
+            {homeSync ? "Fermer" : "Sauvegarde & synchronisation (retrouver mes fichiers sur un autre PC)"}
+          </button>
+          {homeSync && (
+            <div className="mt-2 rounded-xl border border-gray-200 bg-white p-4">
+              <SyncPanel data={libraryData} onRestore={restoreAll} />
+            </div>
+          )}
+        </div>
         <p className="text-[11px] text-gray-400">
           v{APP_VERSION} · IA : {aiOn ? "Claude (clé configurée)" : "mode local (ajoute ANTHROPIC_API_KEY pour activer Claude)"} · N&apos;utilise cet outil que sur des documents que tu es autorisé à modifier.
         </p>
@@ -481,6 +534,7 @@ export default function Editor() {
               canSave={!!doc}
             />
           )}
+          {tab === "sync" && <SyncPanel data={libraryData} onRestore={restoreAll} />}
           {tab === "documents" && <DocumentsPanel documents={documents} currentId={doc.id} onOpen={(d) => void openSaved(d)} onDelete={(id) => void deleteDocument(id)} />}
         </aside>
       </div>
@@ -491,6 +545,7 @@ export default function Editor() {
         <TabButton active={tab === "contacts"} onClick={() => setTab("contacts")}>Contacts</TabButton>
         <TabButton active={tab === "templates"} onClick={() => setTab("templates")}>Modèles</TabButton>
         <TabButton active={tab === "documents"} onClick={() => setTab("documents")}>Mes documents</TabButton>
+        <TabButton active={tab === "sync"} onClick={() => setTab("sync")}>Sauvegarde / Sync</TabButton>
         <div className="ml-auto flex gap-2">
           <button className="btn" onClick={() => void saveTemplate()}>Enregistrer modèle</button>
           <button className="btn-primary" onClick={() => void doExport()} disabled={!!status}>Exporter PDF</button>
