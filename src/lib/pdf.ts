@@ -63,13 +63,23 @@ export async function loadPdf(bytes: ArrayBuffer): Promise<RenderedPage[]> {
       if (!("str" in it) || !it.str.trim()) continue;
       const [a, b, , d, e, f] = it.transform as number[];
       const fontSize = Math.hypot(a, b) || Math.abs(d) || it.height || 10;
+      // The real font (e.g. "ABCDEF+Arial-BoldMT") is available once the page has been rendered.
+      let fontObj: { name?: string; isSerifFont?: boolean; isMonospace?: boolean } | undefined;
+      try {
+        fontObj = page.commonObjs.get(it.fontName) as typeof fontObj;
+      } catch {
+        fontObj = undefined;
+      }
+      const hint = [fontObj?.name, styles[it.fontName]?.fontFamily, fontObj?.isSerifFont ? "serif" : "", fontObj?.isMonospace ? "monospace" : ""]
+        .filter(Boolean)
+        .join(" ");
       items.push({
         str: it.str,
         x: e,
         baseline: viewport.height - f,
         w: it.width,
         fontSize,
-        fontName: `${it.fontName} ${styles[it.fontName]?.fontFamily ?? ""}`,
+        fontName: hint,
       });
     }
 
@@ -105,6 +115,7 @@ function mergeItems(items: RawItem[], page: number): TextSegment[] {
         h: cur.fontSize * 1.1,
         fontSize: cur.fontSize,
         bold: /bold|black|heavy|semibold/i.test(cur.fontName),
+        fontName: cur.fontName,
       });
     }
     cur = null;

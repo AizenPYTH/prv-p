@@ -1,3 +1,5 @@
+import type { FontKey } from "./fonts";
+
 export type FieldType =
   | "date"
   | "amount"
@@ -41,6 +43,8 @@ export interface TextSegment {
   /** font size in document units */
   fontSize: number;
   bold?: boolean;
+  /** Raw font name / family hint from the PDF, used to pick a matching font */
+  fontName?: string;
 }
 
 export interface Field {
@@ -64,7 +68,18 @@ export interface Field {
   segmentId?: string;
   /** True for zones created from text that no rule classified (plain editable text) */
   generic?: boolean;
+  /** Font used to draw the new value (preview and export) */
+  font?: FontKey;
+  /** Original position, kept so a moved zone can cover the text it replaces */
+  ox?: number;
+  oy?: number;
 }
+
+/** True when the field was moved from where its original text sits. */
+export const isMoved = (f: Field) => f.ox !== undefined && f.oy !== undefined && (Math.abs(f.ox - f.x) > 0.01 || Math.abs(f.oy - f.y) > 0.01);
+
+/** True when the field must be painted at export: value changed or zone moved. */
+export const isEdited = (f: Field) => f.value !== f.original || isMoved(f);
 
 export interface PageModel {
   index: number;

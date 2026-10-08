@@ -21,3 +21,15 @@ body {
 @utility panel-title {
   @apply mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500;
 }
+
+/* Fonts shared by the on-screen preview and the PDF export. */
+@font-face { font-family: "Liberation Sans"; src: url("/fonts/LiberationSans-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Liberation Sans"; src: url("/fonts/LiberationSans-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "Liberation Serif"; src: url("/fonts/LiberationSerif-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Liberation Serif"; src: url("/fonts/LiberationSerif-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "Liberation Mono"; src: url("/fonts/LiberationMono-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Liberation Mono"; src: url("/fonts/LiberationMono-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "Carlito"; src: url("/fonts/Carlito-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Carlito"; src: url("/fonts/Carlito-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "DejaVu Sans"; src: url("/fonts/DejaVuSans.ttf"); font-weight: 400; }
+@font-face { font-family: "DejaVu Sans"; src: url("/fonts/DejaVuSans-Bold.ttf"); font-weight: 700; }

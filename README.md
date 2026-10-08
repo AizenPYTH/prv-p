@@ -21,6 +21,8 @@ L'outil est générique : il ne connaît aucun document en particulier. Utilise-
 7. **Modèles** : enregistre le document avec ses zones ; à la réouverture tout est déjà détecté.
    **Mes documents** : chaque document ouvert est sauvegardé automatiquement avec ses modifications (IndexedDB) et peut être rouvert pour continuer l'édition.
 8. **Export PDF** : le fichier d'origine est conservé (mise en page, polices) ; chaque valeur modifiée est peinte par-dessus l'originale, à la même position et à la même taille, avec la couleur de fond échantillonnée sur le document.
+   La police d'origine de chaque zone est détectée (Arial/Helvetica, Calibri, Times New Roman, Courier New, Verdana) et reproduite avec des polices libres métriquement compatibles embarquées dans `public/fonts` (Liberation, Carlito, DejaVu). Choix manuel possible par zone, ainsi que la taille et le gras.
+   Les zones peuvent être déplacées à la souris : le texte d'origine est masqué et la valeur est dessinée au nouvel emplacement.
 
 Les valeurs enregistrées et contacts sont dans le `localStorage` ; les documents et modèles (avec le fichier) dans IndexedDB du navigateur. Pas de base de données serveur.
 
@@ -57,6 +59,6 @@ src/components/         → Editor, DocumentView, FieldPanel, AssistantPanel, Co
 ## Limites connues (MVP)
 
 - L'export recouvre le texte d'origine ; il reste présent dans le flux du PDF sous le rectangle de fond (extractible par copier-coller). Pour un remplacement « réel », il faudrait réécrire le contenu du PDF.
-- La police d'export est Helvetica (ou Helvetica Bold) : proche de la plupart des documents, pas identique.
+- Les polices sont des équivalents libres (mêmes métriques, dessin très proche), pas les polices propriétaires d'origine.
 - Documents et modèles restent dans le navigateur qui les a créés (pas de synchronisation entre appareils).
 - L'OCR télécharge ses données de langue au premier usage (quelques Mo).

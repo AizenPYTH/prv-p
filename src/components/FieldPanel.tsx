@@ -1,6 +1,7 @@
 "use client";
 import type { Field, FieldType, SavedValues } from "@/lib/types";
-import { FIELD_TYPE_LABELS, labelKey } from "@/lib/types";
+import { FIELD_TYPE_LABELS, isEdited, labelKey } from "@/lib/types";
+import { DEFAULT_FONT, FONTS, type FontKey } from "@/lib/fonts";
 
 interface Props {
   fields: Field[];
@@ -18,7 +19,7 @@ export default function FieldPanel({ fields, selected, savedValues, onSelect, on
     return (
       <div className="flex h-full flex-col">
         <h2 className="panel-title">Champs détectés ({fields.length})</h2>
-        <p className="mb-3 text-xs text-gray-500">Clique sur une zone du document ou sur un champ ci-dessous. Double-clic sur une zone pour éditer directement.</p>
+        <p className="mb-3 text-xs text-gray-500">Clique sur une zone du document ou sur un champ ci-dessous. Double-clic pour éditer directement, glisser pour déplacer.</p>
         <ul className="flex-1 space-y-1 overflow-y-auto">
           {fields.map((f) => (
             <li key={f.id}>
@@ -30,7 +31,7 @@ export default function FieldPanel({ fields, selected, savedValues, onSelect, on
                   <span className="font-medium">{f.label}</span>
                   <span className="ml-2 text-gray-500">{f.value}</span>
                 </span>
-                {f.value !== f.original && <span className="ml-2 shrink-0 rounded bg-emerald-100 px-1.5 text-[10px] font-semibold text-emerald-700">modifié</span>}
+                {isEdited(f) && <span className="ml-2 shrink-0 rounded bg-emerald-100 px-1.5 text-[10px] font-semibold text-emerald-700">modifié</span>}
               </button>
             </li>
           ))}
@@ -79,6 +80,17 @@ export default function FieldPanel({ fields, selected, savedValues, onSelect, on
           placeholder={selected.original}
         />
         <span className="text-[11px] text-gray-500">Original : {selected.original || "—"}</span>
+      </label>
+
+      <label className="label">
+        Police
+        <select className="input" value={selected.font ?? DEFAULT_FONT} onChange={(e) => onChange(selected.id, { font: e.target.value as FontKey })}>
+          {(Object.keys(FONTS) as FontKey[]).map((k) => (
+            <option key={k} value={k}>
+              {FONTS[k].label}
+            </option>
+          ))}
+        </select>
       </label>
 
       <div className="flex gap-3">

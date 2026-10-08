@@ -240,6 +240,9 @@ export default function Editor() {
       h: fontSize * 1.2,
       fontSize,
       bg: "#ffffff",
+      font: near?.font,
+      ox: x,
+      oy: y - fontSize * 0.6,
     };
     setDoc({ ...doc, fields: [...doc.fields, field] });
     setSelectedId(field.id);
@@ -436,6 +439,7 @@ export default function Editor() {
               if (id) setTab("field");
             }}
             onChange={(id, value) => patchField(id, { value })}
+            onMove={(id, x, y) => patchField(id, { x, y })}
             onAddAt={addFieldAt}
           />
         </section>

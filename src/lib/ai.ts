@@ -3,6 +3,7 @@ import type { ChatMessage, Contact, Field, FieldType, SavedValues, TextSegment }
 import { FIELD_TYPE_LABELS, labelKey, uid } from "./types";
 import { detectFields, finalizeFields, guessType } from "./detect";
 import { textRange } from "./text";
+import { guessFont } from "./fonts";
 
 let aiStatus: Promise<boolean> | null = null;
 /** True when the server has an Anthropic API key configured. */
@@ -55,6 +56,9 @@ export async function classifySegments(segments: TextSegment[]): Promise<{ field
         bold: seg.bold,
         bg: "#ffffff",
         segmentId: seg.id,
+        font: guessFont(seg.fontName),
+        ox: box.x,
+        oy: seg.y,
       });
     }
     return { fields: finalizeFields(fields, segments), source: "ai" };

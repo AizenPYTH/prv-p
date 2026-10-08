@@ -1,6 +1,7 @@
 import type { Field, FieldType, TextSegment } from "./types";
 import { FIELD_TYPE_LABELS, uid } from "./types";
 import { textRange } from "./text";
+import { guessFont } from "./fonts";
 
 /** Label keywords → field type. Generic across invoices, receipts, orders, letters... */
 const LABEL_RULES: { re: RegExp; type: FieldType }[] = [
@@ -211,6 +212,9 @@ export function detectFields(segments: TextSegment[]): Field[] {
         bold: c.seg.bold,
         bg: "#ffffff",
         segmentId: c.seg.id,
+        font: guessFont(c.seg.fontName),
+        ox: x,
+        oy: c.seg.y,
       };
     });
 
@@ -242,6 +246,9 @@ export function finalizeFields(classified: Field[], segments: TextSegment[]): Fi
       bg: "#ffffff",
       segmentId: s.id,
       generic: true,
+      font: guessFont(s.fontName),
+      ox: s.x,
+      oy: s.y,
     }));
   const all = [...classified, ...leftovers].sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
   return dedupeLabels(all);
