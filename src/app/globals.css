@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+body {
+  background: #f3f4f6;
+  color: #171717;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply inline-flex items-center justify-center rounded-md border border-blue-600 bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility input {
+  @apply w-full rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20;
+}
+@utility label {
+  @apply flex flex-col gap-1 text-xs font-medium text-gray-600;
+}
+@utility panel-title {
+  @apply mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500;
+}
