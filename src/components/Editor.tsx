@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Contact, DocModel, Field, SavedValues, Template } from "@/lib/types";
+import type { Contact, DocModel, Field, SavedDoc, SavedValues, Template } from "@/lib/types";
 import { labelKey, uid } from "@/lib/types";
 import { loadImage, loadPdf, RENDER_SCALE, sampleBackground, type RenderedPage } from "@/lib/pdf";
 import { ocrCanvas } from "@/lib/ocr";
@@ -12,8 +12,9 @@ import FieldPanel from "./FieldPanel";
 import AssistantPanel from "./AssistantPanel";
 import ContactsPanel from "./ContactsPanel";
 import TemplatesPanel from "./TemplatesPanel";
+import DocumentsPanel, { formatDate } from "./DocumentsPanel";
 
-type Tab = "field" | "assistant" | "contacts" | "templates";
+type Tab = "field" | "assistant" | "contacts" | "templates" | "documents";
 
 const readFile = (file: File) =>
   Promise.all([
@@ -46,6 +47,7 @@ export default function Editor() {
   const [savedValues, setSavedValues] = useState<SavedValues>({});
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [documents, setDocuments] = useState<SavedDoc[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -53,9 +55,32 @@ export default function Editor() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSavedValues(storage.loadValues());
     setContacts(storage.loadContacts());
-    setTemplates(storage.loadTemplates());
+    void storage.loadTemplates().then(setTemplates);
+    void storage.loadDocuments().then(setDocuments);
     void aiAvailable().then(setAiOn);
   }, []);
+
+  // Auto-save the open document (debounced) so it can be reopened later.
+  useEffect(() => {
+    if (!doc) return;
+    const t = setTimeout(() => {
+      const saved: SavedDoc = {
+        id: doc.id,
+        name: doc.name,
+        updatedAt: Date.now(),
+        kind: doc.kind,
+        mime: doc.mime,
+        dataUrl: doc.dataUrl,
+        fields: doc.fields,
+        pages: doc.pages.map(({ width, height }) => ({ width, height })),
+      };
+      storage
+        .putDocument(saved)
+        .then(() => setDocuments((list) => [saved, ...list.filter((d) => d.id !== saved.id)]))
+        .catch(() => setError("Sauvegarde automatique impossible (stockage du navigateur plein ?)."));
+    }, 800);
+    return () => clearTimeout(t);
+  }, [doc]);
 
   const selected = doc?.fields.find((f) => f.id === selectedId) ?? null;
   /** Generic text zones can be hidden; classified and edited zones always show. */
@@ -145,6 +170,35 @@ export default function Editor() {
     }
   };
 
+  const openSaved = async (d: SavedDoc) => {
+    setError(null);
+    try {
+      setStatus("Ouverture du document…");
+      const pages = d.kind === "pdf" ? await loadPdf(dataUrlToBuffer(d.dataUrl)) : [await loadImage(d.dataUrl)];
+      setSource("template");
+      setDoc({
+        id: d.id,
+        name: d.name,
+        kind: d.kind,
+        mime: d.mime,
+        dataUrl: d.dataUrl,
+        pages: pages.map(({ index, width, height, imageUrl }) => ({ index, width, height, imageUrl })),
+        fields: d.fields,
+      });
+      setSelectedId(null);
+      setTab("field");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setStatus(null);
+    }
+  };
+
+  const deleteDocument = async (id: string) => {
+    await storage.deleteDocument(id).catch(() => undefined);
+    setDocuments((list) => list.filter((d) => d.id !== id));
+  };
+
   /* ---------- fields ---------- */
 
   const patchField = (id: string, patch: Partial<Field>) =>
@@ -217,29 +271,32 @@ export default function Editor() {
     setContacts(c);
     storage.saveContacts(c);
   };
-  const updateTemplates = (t: Template[]) => {
-    setTemplates(t);
-    if (!storage.saveTemplates(t)) setError("Impossible d'enregistrer : espace de stockage du navigateur insuffisant (fichier trop volumineux).");
+  const deleteTemplate = async (id: string) => {
+    await storage.deleteTemplate(id).catch(() => undefined);
+    setTemplates((list) => list.filter((t) => t.id !== id));
   };
 
-  const saveTemplate = () => {
+  const saveTemplate = async () => {
     if (!doc) return;
     const name = window.prompt("Nom du modèle :", doc.name.replace(/\.[^.]+$/, ""));
     if (!name) return;
-    updateTemplates([
-      ...templates,
-      {
-        id: uid("tpl"),
-        name,
-        createdAt: Date.now(),
-        kind: doc.kind,
-        mime: doc.mime,
-        dataUrl: doc.dataUrl,
-        fields: doc.fields,
-        pages: doc.pages.map(({ width, height }) => ({ width, height })),
-      },
-    ]);
-    setTab("templates");
+    const t: Template = {
+      id: uid("tpl"),
+      name,
+      createdAt: Date.now(),
+      kind: doc.kind,
+      mime: doc.mime,
+      dataUrl: doc.dataUrl,
+      fields: doc.fields,
+      pages: doc.pages.map(({ width, height }) => ({ width, height })),
+    };
+    try {
+      await storage.putTemplate(t);
+      setTemplates((list) => [t, ...list]);
+      setTab("templates");
+    } catch {
+      setError("Impossible d'enregistrer le modèle (stockage du navigateur plein ?).");
+    }
   };
 
   const doExport = async () => {
@@ -297,6 +354,21 @@ export default function Editor() {
           {status && <p className="text-sm text-blue-600">{status}</p>}
           {error && <p className="text-sm text-red-600">{error}</p>}
         </div>
+        {documents.length > 0 && (
+          <div className="w-full max-w-md">
+            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Mes documents</h2>
+            <ul className="space-y-1">
+              {documents.slice(0, 10).map((d) => (
+                <li key={d.id} className="flex items-center gap-1">
+                  <button onClick={() => void openSaved(d)} className="min-w-0 flex-1 truncate rounded-md border border-gray-200 bg-white px-3 py-2 text-left text-sm hover:border-blue-400">
+                    {d.name} <span className="text-gray-400">· {formatDate(d.updatedAt)} · {d.fields.filter((f) => f.value !== f.original).length} modif.</span>
+                  </button>
+                  <button title="Supprimer" onClick={() => void deleteDocument(d.id)} className="px-2 text-gray-400 hover:text-red-600">×</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {templates.length > 0 && (
           <div className="w-full max-w-md">
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Mes modèles</h2>
@@ -321,7 +393,9 @@ export default function Editor() {
   return (
     <main className="flex h-screen flex-col bg-gray-100">
       <header className="flex items-center gap-3 border-b border-gray-200 bg-white px-4 py-2">
-        <span className="font-semibold">Smart Document Editor</span>
+        <button className="font-semibold hover:text-blue-700" title="Retour à l'accueil" onClick={() => setDoc(null)}>
+          Smart Document Editor
+        </button>
         <span className="truncate text-sm text-gray-500">{doc.name}</span>
         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
           {classifiedCount} champs reconnus · {doc.fields.length} zones · {source === "ai" ? "Claude" : source === "template" ? "modèle" : "détection locale"}
@@ -393,11 +467,12 @@ export default function Editor() {
             <TemplatesPanel
               templates={templates}
               onOpen={(t) => void openTemplate(t)}
-              onDelete={(id) => updateTemplates(templates.filter((t) => t.id !== id))}
-              onSaveCurrent={saveTemplate}
+              onDelete={(id) => void deleteTemplate(id)}
+              onSaveCurrent={() => void saveTemplate()}
               canSave={!!doc}
             />
           )}
+          {tab === "documents" && <DocumentsPanel documents={documents} currentId={doc.id} onOpen={(d) => void openSaved(d)} onDelete={(id) => void deleteDocument(id)} />}
         </aside>
       </div>
 
@@ -406,8 +481,9 @@ export default function Editor() {
         <TabButton active={tab === "assistant"} onClick={() => setTab("assistant")}>Assistant IA</TabButton>
         <TabButton active={tab === "contacts"} onClick={() => setTab("contacts")}>Contacts</TabButton>
         <TabButton active={tab === "templates"} onClick={() => setTab("templates")}>Modèles</TabButton>
+        <TabButton active={tab === "documents"} onClick={() => setTab("documents")}>Mes documents</TabButton>
         <div className="ml-auto flex gap-2">
-          <button className="btn" onClick={saveTemplate}>Enregistrer modèle</button>
+          <button className="btn" onClick={() => void saveTemplate()}>Enregistrer modèle</button>
           <button className="btn-primary" onClick={() => void doExport()} disabled={!!status}>Exporter PDF</button>
         </div>
       </footer>

@@ -19,9 +19,10 @@ L'outil est générique : il ne connaît aucun document en particulier. Utilise-
 5. **Assistant IA** : propose les champs un par un, comprend `passer`, `Libellé = valeur`, `contact Nom`. Fonctionne sans clé (mode local) ou avec Claude.
 6. **Contacts / Entreprises** : bibliothèque (nom, adresse, IBAN, banque, email, téléphone, SIREN). « Appliquer » remplit les champs correspondants.
 7. **Modèles** : enregistre le document avec ses zones ; à la réouverture tout est déjà détecté.
+   **Mes documents** : chaque document ouvert est sauvegardé automatiquement avec ses modifications (IndexedDB) et peut être rouvert pour continuer l'édition.
 8. **Export PDF** : le fichier d'origine est conservé (mise en page, polices) ; chaque valeur modifiée est peinte par-dessus l'originale, à la même position et à la même taille, avec la couleur de fond échantillonnée sur le document.
 
-Les valeurs enregistrées, contacts et modèles sont stockés dans le `localStorage` du navigateur (pas de base de données).
+Les valeurs enregistrées et contacts sont dans le `localStorage` ; les documents et modèles (avec le fichier) dans IndexedDB du navigateur. Pas de base de données serveur.
 
 ## Lancer
 
@@ -48,7 +49,8 @@ src/lib/ocr.ts          → OCR Tesseract pour images / scans
 src/lib/detect.ts       → détection heuristique des champs
 src/lib/ai.ts           → appels IA côté client + assistant local (sans clé)
 src/lib/exportPdf.ts    → export PDF (pdf-lib)
-src/lib/storage.ts      → localStorage (valeurs, contacts, modèles)
+src/lib/storage.ts      → localStorage (valeurs, contacts) + IndexedDB (documents, modèles)
+src/lib/db.ts           → mini wrapper IndexedDB
 src/components/         → Editor, DocumentView, FieldPanel, AssistantPanel, ContactsPanel, TemplatesPanel
 ```
 
@@ -56,5 +58,5 @@ src/components/         → Editor, DocumentView, FieldPanel, AssistantPanel, Co
 
 - L'export recouvre le texte d'origine ; il reste présent dans le flux du PDF sous le rectangle de fond (extractible par copier-coller). Pour un remplacement « réel », il faudrait réécrire le contenu du PDF.
 - La police d'export est Helvetica (ou Helvetica Bold) : proche de la plupart des documents, pas identique.
-- Les modèles sont limités par le quota `localStorage` du navigateur (~5 Mo) : les très gros fichiers ne peuvent pas être enregistrés comme modèle.
+- Documents et modèles restent dans le navigateur qui les a créés (pas de synchronisation entre appareils).
 - L'OCR télécharge ses données de langue au premier usage (quelques Mo).

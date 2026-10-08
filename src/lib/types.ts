@@ -110,6 +110,18 @@ export interface Template {
   pages: { width: number; height: number }[];
 }
 
+/** A document being worked on, auto-saved so it can be reopened and edited again. */
+export interface SavedDoc {
+  id: string;
+  name: string;
+  updatedAt: number;
+  kind: "pdf" | "image";
+  mime: string;
+  dataUrl: string;
+  fields: Field[];
+  pages: { width: number; height: number }[];
+}
+
 export type SavedValues = Record<string, string[]>;
 
 export interface ChatMessage {

@@ -27,16 +27,11 @@ function sanitize(text: string, font: PDFFont): string {
 function drawField(page: PDFPage, f: Field, fonts: { regular: PDFFont; bold: PDFFont }, scale: number, pageHeight: number) {
   const font = f.bold ? fonts.bold : fonts.regular;
   const text = sanitize(f.value, font);
-  let size = f.fontSize * scale;
+  // Always keep the original font size: the value must look like the text it replaces.
+  const size = f.fontSize * scale;
   const boxW = f.w * scale;
   const boxH = f.h * scale;
-  let textW = font.widthOfTextAtSize(text, size);
-  // Shrink to fit when the new value is much longer than the original box.
-  const maxW = Math.max(boxW, f.w * scale * 1.6);
-  if (textW > maxW) {
-    size = Math.max(4, (size * maxW) / textW);
-    textW = font.widthOfTextAtSize(text, size);
-  }
+  const textW = font.widthOfTextAtSize(text, size);
   const x = f.x * scale;
   const top = pageHeight - f.y * scale; // PDF origin is bottom-left
   page.drawRectangle({
