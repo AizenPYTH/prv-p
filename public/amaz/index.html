@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Générateur de factures</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>">
+  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/invoice.css">
+  <script src="assets/config.js"></script>
+  <script src="assets/sync.js"></script>
+  <script src="assets/invoice.js"></script>
+</head>
+<body>
+  <header class="barre no-print">
+    <div class="marque">🧾 Générateur de factures</div>
+    <div class="actions">
+      <a class="btn btn-secondaire" href="paiements.html" style="text-decoration:none">💳 Avis / reçus de paiement</a>
+      <button id="btn-synchro" class="btn btn-secondaire" type="button">☁ Synchroniser</button>
+      <button id="btn-profil" class="btn btn-secondaire" type="button">⚙ Mon entreprise</button>
+      <button id="btn-logo" class="btn btn-secondaire" type="button">🖼 Ajuster le logo</button>
+      <button id="btn-clients" class="btn btn-secondaire" type="button">👥 Clients</button>
+      <button id="btn-ia" class="btn btn-secondaire" type="button">✨ Coller la commande (IA)</button>
+      <button id="btn-factures" class="btn btn-secondaire" type="button">📁 Factures</button>
+      <button id="btn-lot" class="btn btn-secondaire" type="button">🗂 Plusieurs factures</button>
+      <button id="btn-nouvelle" class="btn btn-secondaire" type="button">Nouvelle facture</button>
+      <button id="btn-pdf" class="btn btn-principal" type="button">Télécharger le PDF</button>
+    </div>
+  </header>
+
+  <main class="app">
+    <section class="chat no-print" aria-label="Assistant">
+      <div id="etat-facture" class="etat-facture"></div>
+      <div id="fil" class="fil" aria-live="polite"></div>
+      <form id="saisie" class="saisie" autocomplete="off">
+        <div id="suggestions" class="suggestions"></div>
+        <div class="ligne-saisie">
+          <button id="btn-retour" class="btn btn-icone" type="button" title="Revenir à la question précédente">↩</button>
+          <input id="reponse" type="text" placeholder="Ta réponse… (Entrée pour valider)" autofocus>
+          <button class="btn btn-principal" type="submit">OK</button>
+        </div>
+        <div class="aide">Entrée sur un champ vide = garder la valeur proposée · « - » = laisser vide</div>
+      </form>
+    </section>
+
+    <section class="apercu" aria-label="Aperçu de la facture">
+      <div class="apercu-cadre" id="cadre">
+        <div id="feuille" class="page-a4"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Réglage du logo : taille et position, enregistré tout de suite -->
+  <aside id="panneau-logo" class="panneau no-print" hidden>
+    <div class="panneau-titre">🖼 Ajuster le logo <button id="btn-logo-fermer" class="btn btn-icone" type="button" title="Fermer">✕</button></div>
+    <p class="panneau-aide">Tu peux aussi faire glisser le logo directement sur la facture. Tout est enregistré automatiquement.</p>
+    <label>Taille <span id="v-taille"></span><input id="r-taille" type="range" min="5" max="60" step="0.5"></label>
+    <label>Gauche ↔ droite <span id="v-x"></span><input id="r-x" type="range" min="-10" max="140" step="0.5"></label>
+    <label>Haut ↕ bas <span id="v-y"></span><input id="r-y" type="range" min="-8" max="40" step="0.5"></label>
+    <div class="panneau-actions">
+      <button id="btn-logo-rogner" class="btn btn-secondaire" type="button" title="Enlève le blanc / transparent autour du logo">✂ Rogner les marges vides</button>
+      <button id="btn-logo-reset" class="btn btn-secondaire" type="button">Réinitialiser</button>
+    </div>
+    <p id="etat-logo" class="panneau-aide"></p>
+  </aside>
+
+  <!-- Synchronisation entre ordinateurs -->
+  <dialog id="dlg-synchro" class="no-print">
+    <form method="dialog" class="dlg">
+      <h2>☁ Retrouver mes données sur tous mes ordinateurs</h2>
+      <p>Une fois connecté avec ton code d'accès, tes réglages, ton logo, tes clients et tes factures sont enregistrés en ligne et
+        rechargés automatiquement sur chaque ordinateur où tu te connectes.</p>
+      <p id="etat-synchro" class="aide-dlg"></p>
+      <div id="bloc-code">
+        <label>Code d'accès (celui mis dans la variable CODE_ACCES sur Vercel)
+          <input id="code-acces" type="password" autocomplete="current-password">
+        </label>
+        <p class="aide-dlg">Si des données sont déjà en ligne, elles remplacent celles de cet ordinateur. Sinon, les données de cet ordinateur sont envoyées en ligne.</p>
+      </div>
+      <p id="erreur-synchro" class="erreur" hidden></p>
+      <div class="dlg-actions">
+        <button id="btn-synchro-deco" type="button" class="btn btn-secondaire" hidden>Déconnecter cet ordinateur</button>
+        <button value="fermer" class="btn btn-secondaire">Fermer</button>
+        <button id="btn-synchro-ok" value="ok" class="btn btn-principal">Connecter</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Créer plusieurs factures pour un même client -->
+  <dialog id="dlg-lot" class="no-print">
+    <form method="dialog" class="dlg">
+      <h2>🗂 Plusieurs factures pour un même client</h2>
+      <p>Les infos du client sont reprises sur toutes les factures. Chaque facture reste indépendante : tu saisis ensuite pour chacune son numéro de commande et ses produits réels.</p>
+      <label>Client
+        <select id="lot-client"></select>
+      </label>
+      <div class="grille">
+        <label>Nombre de factures<input id="lot-nombre" type="number" min="1" max="50" value="5"></label>
+        <label>Nom du lot (facultatif)<input id="lot-nom" placeholder="ex : Équipement bureaux octobre"></label>
+        <label>Budget maximum du client (facultatif)<input id="lot-budget" inputmode="decimal" placeholder="ex : 17 000"></label>
+        <label>Budget exprimé en
+          <select id="lot-budget-type"><option>TTC</option><option>HT</option></select>
+        </label>
+      </div>
+      <p class="aide-dlg">Le budget sert uniquement de contrôle : le total cumulé des factures est comparé au budget, et tu es prévenu s'il est dépassé ou s'il reste une marge. Les prix restent ceux que tu saisis.</p>
+      <p id="erreur-lot" class="erreur" hidden></p>
+      <div class="dlg-actions">
+        <button value="annuler" class="btn btn-secondaire">Annuler</button>
+        <button id="btn-lot-ok" value="ok" class="btn btn-principal">Créer les factures</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Liste des factures (lots et factures seules) -->
+  <dialog id="dlg-factures" class="no-print">
+    <form method="dialog" class="dlg">
+      <h2>📁 Mes factures</h2>
+      <p>Les brouillons sont modifiables. Un numéro définitif (unique, à la suite) est attribué seulement quand tu valides une facture ; elle n'est plus modifiable ensuite.</p>
+      <div id="liste-factures" class="liste-factures"></div>
+      <div class="dlg-actions">
+        <button id="btn-factures-lot" type="button" class="btn btn-secondaire">🗂 Plusieurs factures pour un client</button>
+        <button value="fermer" class="btn btn-secondaire">Fermer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Clients enregistrés -->
+  <dialog id="dlg-clients" class="no-print">
+    <form method="dialog" class="dlg">
+      <h2>👥 Mes clients</h2>
+      <p>Chaque client est enregistré automatiquement quand sa facture est terminée. Clique sur « Nouvelle facture » pour refaire une facture sans retaper ses adresses.</p>
+      <input id="recherche-client" type="search" placeholder="Rechercher un client…">
+      <ul id="liste-clients" class="liste-clients"></ul>
+      <div class="dlg-actions">
+        <button value="fermer" class="btn btn-secondaire">Fermer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Coller une commande : l'IA pré-remplit UNIQUEMENT la partie qui change -->
+  <dialog id="dlg-ia" class="no-print">
+    <form method="dialog" class="dlg">
+      <h2>✨ Pré-remplir avec l'IA</h2>
+      <p>Colle le texte de la commande (mail de confirmation, adresse, articles, prix…) et/ou joins une capture ou un PDF. L'IA remplit seulement les infos du client et de la commande : ton logo et ton entreprise ne bougent pas.</p>
+      <textarea id="texte-ia" rows="10" placeholder="Ex : Commande n° 403-1234567-1234567 du 08/12/2025&#10;Jean Dupont, 7 square de l'Exemple, 13001 Marseille&#10;1 x Ordinateur portable 14 pouces 1 299,00 € TTC"></textarea>
+      <label class="fichier">📎 Joindre une capture ou un PDF (facultatif)
+        <input id="fichier-ia" type="file" accept="image/*,application/pdf">
+      </label>
+      <p id="erreur-ia" class="erreur" hidden></p>
+      <div class="dlg-actions">
+        <button value="annuler" class="btn btn-secondaire">Annuler</button>
+        <button id="btn-ia-go" value="ok" class="btn btn-principal">Pré-remplir</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Mon entreprise : la partie FIXE de la facture -->
+  <dialog id="dlg-profil" class="no-print">
+    <form method="dialog" class="dlg" id="form-profil">
+      <h2>⚙ Mon entreprise (partie fixe de la facture)</h2>
+      <p>Tout ce qui est ici apparaît à l'identique sur chaque facture. L'IA ne le modifie jamais quand tu remplis une facture.</p>
+
+      <div class="import-ia">
+        <label class="fichier">📄 Remplir automatiquement depuis MA facture (PDF ou image)
+          <input id="fichier-profil" type="file" accept="image/*,application/pdf">
+        </label>
+        <span id="etat-profil" class="etat"></span>
+      </div>
+
+      <fieldset>
+        <legend>Logo et couleur</legend>
+        <div class="logo-ligne">
+          <img id="apercu-logo" alt="">
+          <label class="fichier">Choisir mon logo<input id="p-logo" type="file" accept="image/*"></label>
+          <label>Couleur de la bande <input id="p-couleur" type="color"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Vendu par</legend>
+        <div class="grille">
+          <label class="large">Nom de l'entreprise<input id="p-nom"></label>
+          <label class="large">Adresse<input id="p-adresse"></label>
+          <label>Code postal<input id="p-cp"></label>
+          <label>Ville<input id="p-ville"></label>
+          <label>Pays<input id="p-pays"></label>
+          <label>N° de TVA<input id="p-tva"></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Textes</legend>
+        <label>Ligne de contact (sous l'adresse du client)<input id="p-contact"></label>
+        <label>Mentions obligatoires (petit texte en bas)<textarea id="p-mentions" rows="3"></textarea></label>
+        <label>Pied de page (une ligne par retour à la ligne)<textarea id="p-pied" rows="4"></textarea></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Numérotation et articles</legend>
+        <div class="grille">
+          <label>Préfixe des n° de facture<input id="p-prefixe"></label>
+          <label>Prochain numéro<input id="p-prochain" type="number" min="1"></label>
+          <label>Libellé de la référence article<input id="p-libref"></label>
+          <label>Prix saisis en
+            <select id="p-prix"><option>TTC</option><option>HT</option></select>
+          </label>
+        </div>
+      </fieldset>
+
+      <p id="erreur-profil" class="erreur" hidden></p>
+      <fieldset>
+        <legend>Sauvegarde</legend>
+        <p>Tes réglages et tes clients sont gardés dans ce navigateur. Garde aussi une copie dans un fichier, pour les remettre sur un autre appareil en 1 clic.</p>
+        <div class="logo-ligne">
+          <button id="btn-sauver" type="button" class="btn btn-secondaire">💾 Télécharger mes réglages</button>
+          <label class="fichier">📂 Restaurer un fichier de réglages<input id="fichier-reglages" type="file" accept="application/json,.json"></label>
+        </div>
+      </fieldset>
+
+      <div class="dlg-actions">
+        <button id="btn-profil-reset" type="button" class="btn btn-secondaire">Valeurs par défaut</button>
+        <button value="annuler" class="btn btn-secondaire">Annuler</button>
+        <button id="btn-profil-ok" value="ok" class="btn btn-principal">Enregistrer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="assets/app.js"></script>
+</body>
+</html>

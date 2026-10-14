@@ -7,6 +7,9 @@ const eslintConfig = defineConfig([
   ...nextTs,
   // Override default ignores of eslint-config-next.
   globalIgnores([
+    // Projet Amaz intégré tel quel (non modifié, non linté)
+    "src/amaz/**",
+    "public/**",
     // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",

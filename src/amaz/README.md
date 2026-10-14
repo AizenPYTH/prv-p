@@ -1,0 +1,115 @@
+# 🧾 Générateur de factures
+
+Un site qui te pose les questions **une par une** (client, adresses, commande, articles, prix…), affiche la facture en direct et la sort en **PDF**.
+Le modèle, le logo et la police ne bougent pas : seules les infos saisies changent.
+
+- Calcul automatique du **HT**, de la **TVA 20 %** et du **TTC** : tu tapes le montant que tu as (`49,90 ttc`, `41,58 ht` ou `8,32 tva`), le reste est calculé
+- « Combien de produits ? » : les lignes sont préparées sur la facture, puis remplies une par une
+- **🗂 Plusieurs factures pour un même client** : tu choisis le client et le nombre de factures ; ses infos sont reprises
+  partout. Chaque facture reste indépendante (son n° de commande, ses produits réels), et se prépare séparément.
+  Le total cumulé du lot est affiché en continu.
+- **Budget maximum (HT ou TTC)** : simple contrôle. Le site compare le total réel des factures au budget et
+  indique s'il est dépassé ou combien il reste. Il ne modifie jamais les prix.
+- **Brouillons puis validation** : une facture reste modifiable tant qu'elle est en brouillon. En la validant,
+  elle reçoit son numéro définitif et n'est plus modifiable (pour corriger : un avoir).
+- **Numérotation** : préfixe personnalisable (ex : `FR487D-`) + compteur → `FR487D-00001`, `FR487D-00002`…
+  Numéro attribué uniquement à la validation : uniques, à la suite, sans trou. Le compteur ne peut pas revenir en arrière.
+- **📁 Factures** : tous les lots et factures, statut, totaux HT/TVA/TTC, « Valider et télécharger tout le lot »
+- Les produits déjà facturés sont proposés en raccourci (description, référence et dernier prix, à confirmer)
+- Référence de paiement : uniquement celle que tu saisis (celle du paiement reçu), jamais générée
+- Code postal `750xx` → ville « Paris » proposée automatiquement (pareil pour Lyon et Marseille)
+- Bouton **↩** pour revenir à la question précédente
+- **⚙ Mon entreprise** : la partie FIXE (logo, couleur, bloc « Vendu par », ligne de contact, mentions, pied de page, numérotation).
+  Bouton « Remplir automatiquement depuis MA facture » : l'IA lit ta facture (PDF/image) et remplit ces champs.
+- **✨ Coller la commande (IA)** : tu colles le mail de commande (ou une capture), l'IA pré-remplit UNIQUEMENT la partie qui change
+  (client, adresses, commande, articles, prix). Elle ne peut pas toucher au logo ni à ton entreprise : ces champs ne lui sont même pas demandés.
+- **🖼 Ajuster le logo** : taille et position avec des curseurs, ou en faisant glisser le logo sur la facture ;
+  « Rogner les marges vides » enlève le blanc autour du logo (souvent la cause d'un logo qui paraît minuscule)
+- **👥 Clients** : chaque client est enregistré à la fin de sa facture. Pour le refacturer : « Nouvelle facture pour le même client »,
+  ou choisis-le au début d'une nouvelle facture ; ses adresses sont reprises et on passe directement à la commande et aux produits
+- **☁ Synchroniser** : retrouve tes réglages, ton logo, tes clients et tes factures sur tous tes ordinateurs (voir plus bas)
+- **💾 Télécharger mes réglages** (dans « Mon entreprise ») : une copie de ton logo, de tes infos, de tes clients et de tes factures dans un fichier, à restaurer en 1 clic
+
+## 💳 Avis et reçus de paiement (page `paiements.html`)
+
+Accessible depuis le bouton « 💳 Avis / reçus de paiement » en haut de la page des factures.
+
+- **Paramètres** : ta société (logo, nom, adresse, SIREN/SIRET, email, téléphone, texte de pied de page) et tes comptes
+  bancaires (libellé, IBAN, banque, BIC). Bouton pour reprendre les infos et le logo de « Mon entreprise ».
+- **Contacts** : les personnes ou sociétés que tu paies ou qui te paient (nom, IBAN, banque, BIC, adresse) — ajouter, modifier, supprimer.
+- **Nouveau document** : tu choisis le type, ton compte, le contact, la date, le montant, la devise et la référence ;
+  l'aperçu A4 se met à jour en direct, « Générer le PDF » le numérote, l'enregistre dans l'historique et le télécharge.
+  - **Avis de paiement / Payment advice** (n° AP-AAAA-0001) : paiement effectué par ta société.
+  - **Reçu de paiement / Payment receipt** (n° RP-AAAA-0001) : paiement reçu par ta société.
+- **Historique** : tous les documents générés, avec « Regénérer » (recharge dans le formulaire) et « Télécharger ».
+- **✏ Modifier la mise en page** (au-dessus de l'aperçu) : fais glisser le logo, le titre, le bloc d'informations et le
+  pied de page ; règle l'espacement des lignes et la position de la colonne des valeurs. La mise en page est enregistrée
+  et réutilisée pour tous les documents suivants (« Réinitialiser » revient à l'original). La mention du bas reste fixe.
+- **Modifier le texte sur la feuille** : clic sur une valeur (date, montant, référence, nom / IBAN / banque du contact),
+  tape, puis Entrée. Le formulaire est mis à jour en même temps. Les infos de ta société se changent dans Paramètres ;
+  le titre et la mention du bas ne sont pas modifiables.
+- Ta société est toujours l'une des deux parties, et le pied de page indique que le document est émis par elle et
+  ne constitue pas une attestation bancaire. Pour prouver un virement auprès d'un tiers, utilise la preuve fournie par ta banque.
+- Les IBAN sont vérifiés (clé de contrôle) ; date au format JJ/MM/AAAA ; montants formatés selon la devise.
+- Stockage local dans le navigateur (pas encore inclus dans la synchronisation ni dans le fichier de sauvegarde).
+
+## Mettre en ligne sur Vercel
+
+1. Va sur [vercel.com/new](https://vercel.com/new) et importe ce dépôt GitHub.
+2. Ne change aucun réglage (pas de framework, pas de build) → **Deploy**.
+3. *(Pour les boutons IA)* Dans **Settings → Environment Variables**, ajoute
+   `OPENAI_API_KEY` = ta clé OpenAI, puis redéploie.
+   Optionnel : `OPENAI_MODEL` pour choisir le modèle (par défaut `gpt-5.4-mini`).
+   Sans clé, le site marche quand même : tu remplis juste à la main.
+
+## Retrouver ses données sur plusieurs ordinateurs (☁ Synchroniser)
+
+À faire une seule fois sur Vercel :
+
+1. Dans ton projet Vercel : **Storage** → **Create Database** (ou **Marketplace**) → **Upstash** → **Redis** (offre gratuite)
+   → crée la base et **connecte-la au projet**. Vercel ajoute tout seul les variables `KV_REST_API_URL` et `KV_REST_API_TOKEN`
+   (ou `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`, les deux marchent).
+2. **Settings → Environment Variables** : ajoute `CODE_ACCES` = un mot de passe long que toi seul connais.
+3. **Redéploie** le projet.
+
+Puis sur chaque ordinateur : bouton **☁ Synchroniser** → tape ton code d'accès → **Connecter**.
+
+- Le premier ordinateur connecté envoie ses données en ligne ; les suivants les récupèrent.
+- Ensuite tout s'enregistre en ligne automatiquement (quelques secondes après chaque changement) et les autres ordinateurs
+  récupèrent les changements à l'ouverture, quand tu reviens sur l'onglet, et toutes les minutes.
+- Si deux ordinateurs modifient en même temps, rien n'est perdu : les factures sont fusionnées une par une
+  (une facture validée l'emporte sur un brouillon ; entre deux brouillons, le plus récent).
+- Valider une facture demande une connexion : le site vérifie la dernière version en ligne avant de donner le numéro,
+  donc deux ordinateurs ne peuvent jamais attribuer le même numéro.
+- Sans connexion internet, le site continue de marcher ; les changements partent dès que la connexion revient.
+- Les données (dont les adresses de tes clients) sont stockées dans ta base Upstash, protégées par ton code d'accès.
+  Ne donne ce code à personne.
+
+## Mettre TA facture (logo, police, infos de ton entreprise)
+
+| Quoi | Où |
+|---|---|
+| Logo, couleur, « Vendu par », mentions, pied de page | sur le site : **⚙ Mon entreprise** (gardé dans ton navigateur) |
+| Les mêmes valeurs, pour tous tes appareils | `assets/config.js` (et ton logo à la place de `assets/logo.svg`) |
+| Disposition de la facture | `assets/invoice.js` (contenu) et `assets/invoice.css` (mise en page) |
+
+## Est-ce que je perds mes réglages en redéployant ?
+
+Non. Tes réglages sont gardés dans ton navigateur, pour l'adresse du site. Un nouveau déploiement ne les efface pas,
+**à condition d'ouvrir toujours la même adresse** (celle de production, ex : `ton-projet.vercel.app`).
+Les adresses de prévisualisation de Vercel (`ton-projet-xxxx-....vercel.app`) sont considérées comme d'autres sites : tes réglages n'y sont pas.
+Ils sont perdus seulement si tu vides les données du navigateur, ou sur un autre appareil : d'où le bouton « 💾 Télécharger mes réglages ».
+
+## Télécharger le PDF
+
+Clique sur **Valider et télécharger le PDF** : la facture reçoit son numéro, puis le fichier `Facture <numéro>.pdf`
+se télécharge directement (format A4), sans passer par l'imprimante. Une facture déjà validée se retélécharge à l'identique.
+Pour un lot : « 📁 Factures » → « Valider et télécharger tout le lot » (un PDF par facture ; le navigateur peut demander
+d'autoriser les téléchargements multiples).
+
+## Tester en local
+
+```bash
+npm install
+npx vercel dev
+```

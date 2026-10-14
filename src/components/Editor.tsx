@@ -396,6 +396,7 @@ export default function Editor() {
         }}
       >
         <div className="text-center">
+          <a href="/" className="text-xs text-gray-400 hover:text-blue-600">← Tous les projets</a>
           <h1 className="text-3xl font-bold tracking-tight">Smart Document Editor</h1>
           <p className="mt-2 text-gray-500">Importer → Détecter → Modifier → Enregistrer → Exporter</p>
         </div>
