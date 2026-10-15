@@ -85,6 +85,8 @@ src/lib/db.ts           → mini wrapper IndexedDB
 src/components/         → Editor, DocumentView, FieldPanel, AssistantPanel, ContactsPanel, TemplatesPanel
 ```
 
+- **Images** : bouton « Ajouter une image » (PNG/JPG). L'image se place, se déplace et se redimensionne à la souris, et est intégrée au PDF exporté. Chaque image est ré-encodée en PNG standard à l'ajout.
+
 ## Limites connues (MVP)
 
 - L'export recouvre le texte d'origine ; il reste présent dans le flux du PDF sous le rectangle de fond (extractible par copier-coller). Pour un remplacement « réel », il faudrait réécrire le contenu du PDF.

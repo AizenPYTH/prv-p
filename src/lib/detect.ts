@@ -50,6 +50,11 @@ const VALUE_RULES: ValueRule[] = [
     type: "amount",
     re: /(?:€|\$|£)\s?-?\d{1,3}(?:[  .,]?\d{3})*(?:[.,]\d{1,2})?/g,
   },
+  {
+    // Number written out with a currency word: "2 261 621 342 euros" → the full number is one field.
+    type: "amount",
+    re: /-?\d{1,3}(?:[ \u00A0\u202F]\d{3})+(?:[.,]\d{1,2})?(?=\s?(?:euros?|EUR\b))/gi,
+  },
   { type: "percent", re: /\b\d{1,3}(?:[.,]\d{1,2})?\s?%/g },
   {
     type: "phone",

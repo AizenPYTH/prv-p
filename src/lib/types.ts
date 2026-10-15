@@ -73,6 +73,21 @@ export interface Field {
   /** Original position, kept so a moved zone can cover the text it replaces */
   ox?: number;
   oy?: number;
+  /** Character span this field covers inside its source segment (for gap filling) */
+  segStart?: number;
+  segEnd?: number;
+}
+
+/** A PNG/JPG image dropped onto the document. Coordinates are in document units. */
+export interface ImageOverlay {
+  id: string;
+  page: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  dataUrl: string;
+  mime: string;
 }
 
 /** True when the field was moved from where its original text sits. */
@@ -99,6 +114,7 @@ export interface DocModel {
   dataUrl: string;
   pages: PageModel[];
   fields: Field[];
+  images: ImageOverlay[];
 }
 
 export interface Contact {
@@ -121,6 +137,7 @@ export interface Template {
   mime: string;
   dataUrl: string;
   fields: Field[];
+  images?: ImageOverlay[];
   /** page sizes in document units, used to validate the template */
   pages: { width: number; height: number }[];
 }
@@ -134,6 +151,7 @@ export interface SavedDoc {
   mime: string;
   dataUrl: string;
   fields: Field[];
+  images?: ImageOverlay[];
   pages: { width: number; height: number }[];
 }
 

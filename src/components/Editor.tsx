@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Contact, DocModel, Field, SavedDoc, SavedValues, Template } from "@/lib/types";
+import type { Contact, DocModel, Field, ImageOverlay, SavedDoc, SavedValues, Template } from "@/lib/types";
 import { labelKey, uid } from "@/lib/types";
 import { loadImage, loadPdf, RENDER_SCALE, sampleBackground, type RenderedPage } from "@/lib/pdf";
 import { ocrCanvas } from "@/lib/ocr";
@@ -42,6 +42,7 @@ export default function Editor() {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("field");
   const [addMode, setAddMode] = useState(false);
   const [showAll, setShowAll] = useState(true);
@@ -76,6 +77,7 @@ export default function Editor() {
         mime: doc.mime,
         dataUrl: doc.dataUrl,
         fields: doc.fields,
+        images: doc.images,
         pages: doc.pages.map(({ width, height }) => ({ width, height })),
       };
       storage
@@ -136,6 +138,7 @@ export default function Editor() {
         dataUrl,
         pages: pages.map(({ index, width, height, imageUrl }) => ({ index, width, height, imageUrl })),
         fields: withBackgrounds(fields, pages, kind),
+        images: [],
       });
       setSelectedId(null);
       setTab("field");
@@ -164,6 +167,7 @@ export default function Editor() {
           pages,
           t.kind,
         ),
+        images: t.images ?? [],
       });
       setSelectedId(null);
       setTab("field");
@@ -188,6 +192,7 @@ export default function Editor() {
         dataUrl: d.dataUrl,
         pages: pages.map(({ index, width, height, imageUrl }) => ({ index, width, height, imageUrl })),
         fields: d.fields,
+        images: d.images ?? [],
       });
       setSelectedId(null);
       setTab("field");
@@ -292,6 +297,50 @@ export default function Editor() {
     setAddMode(false);
   };
 
+  const imageInput = useRef<HTMLInputElement>(null);
+
+  /** Adds a PNG/JPG at the top of the first page, scaled to about a third of the page width. */
+  const addImage = async (file: File) => {
+    if (!doc) return;
+    if (!/^image\/(png|jpe?g)$/.test(file.type)) {
+      setError("Image : PNG ou JPG uniquement.");
+      return;
+    }
+    const srcUrl = await new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(r.result as string);
+      r.onerror = () => rej(r.error);
+      r.readAsDataURL(file);
+    });
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const el = new Image();
+      el.onload = () => res(el);
+      el.onerror = () => rej(new Error("Image illisible."));
+      el.src = srcUrl;
+    });
+    // Re-encode through a canvas: normalises any PNG/JPG into a standard PNG the
+    // PDF export can always embed (some exotic PNGs break the embedder otherwise).
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth || 200;
+    canvas.height = img.naturalHeight || 200;
+    canvas.getContext("2d")!.drawImage(img, 0, 0);
+    const dataUrl = canvas.toDataURL("image/png");
+    const page = doc.pages[0];
+    const w = page.width * 0.3;
+    const h = (canvas.height / canvas.width) * w || w;
+    const overlay: ImageOverlay = { id: uid("img"), page: 0, x: page.width * 0.1, y: page.height * 0.1, w, h, dataUrl, mime: "image/png" };
+    setDoc({ ...doc, images: [...doc.images, overlay] });
+    setSelectedImageId(overlay.id);
+  };
+
+  const patchImage = (id: string, patch: Partial<ImageOverlay>) =>
+    setDoc((d) => d && { ...d, images: d.images.map((im) => (im.id === id ? { ...im, ...patch } : im)) });
+
+  const deleteImage = (id: string) => {
+    setDoc((d) => d && { ...d, images: d.images.filter((im) => im.id !== id) });
+    setSelectedImageId(null);
+  };
+
   const applyContact = (c: Contact) => {
     if (!doc) return;
     const updates = contactUpdates(c, doc.fields);
@@ -339,6 +388,7 @@ export default function Editor() {
       mime: doc.mime,
       dataUrl: doc.dataUrl,
       fields: doc.fields,
+      images: doc.images,
       pages: doc.pages.map(({ width, height }) => ({ width, height })),
     };
     try {
@@ -396,6 +446,7 @@ export default function Editor() {
         }}
       >
         <div className="text-center">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/" className="text-xs text-gray-400 hover:text-blue-600">← Tous les projets</a>
           <h1 className="text-3xl font-bold tracking-tight">Smart Document Editor</h1>
           <p className="mt-2 text-gray-500">Importer → Détecter → Modifier → Enregistrer → Exporter</p>
@@ -471,6 +522,25 @@ export default function Editor() {
           <button className={`btn ${addMode ? "!border-blue-500 !bg-blue-50" : ""}`} onClick={() => setAddMode((v) => !v)}>
             {addMode ? "Clique sur le document…" : "Ajouter une zone"}
           </button>
+          <input
+            ref={imageInput}
+            type="file"
+            accept="image/png,image/jpeg"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) void addImage(f);
+            }}
+          />
+          <button className="btn" onClick={() => imageInput.current?.click()}>
+            Ajouter une image
+          </button>
+          {selectedImageId && (
+            <button className="btn text-red-600" onClick={() => deleteImage(selectedImageId)}>
+              Supprimer l&apos;image
+            </button>
+          )}
           {Import}
         </div>
       </header>
@@ -495,6 +565,14 @@ export default function Editor() {
             onChange={(id, value) => patchField(id, { value })}
             onMove={(id, x, y) => patchField(id, { x, y })}
             onAddAt={addFieldAt}
+            images={doc.images}
+            selectedImageId={selectedImageId}
+            onSelectImage={(id) => {
+              setSelectedImageId(id);
+              if (id) setSelectedId(null);
+            }}
+            onMoveImage={(id, x, y) => patchImage(id, { x, y })}
+            onResizeImage={(id, w, h) => patchImage(id, { w, h })}
           />
         </section>
 

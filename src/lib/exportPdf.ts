@@ -121,6 +121,21 @@ export async function exportPdf(doc: DocModel): Promise<Uint8Array> {
 
   const fonts = new FontLoader(pdf);
   const pages = pdf.getPages();
+
+  // Draw added images first, so edited text can sit on top if they overlap.
+  for (const im of doc.images ?? []) {
+    const page = pages[im.page];
+    if (!page) continue;
+    try {
+      const bytes = dataUrlToBytes(im.dataUrl);
+      const embedded = im.mime === "image/png" ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes);
+      const h = page.getHeight();
+      page.drawImage(embedded, { x: im.x * scale, y: h - (im.y + im.h) * scale, width: im.w * scale, height: im.h * scale });
+    } catch {
+      /* image illisible : on l'ignore à l'export */
+    }
+  }
+
   for (const f of edited) {
     const page = pages[f.page];
     if (!page) continue;

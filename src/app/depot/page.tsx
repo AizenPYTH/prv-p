@@ -104,6 +104,7 @@ export default function DepotPage() {
       {/* ---------- saisie (masquée à l'impression) ---------- */}
       <div className="mx-auto flex max-w-4xl flex-col gap-6 print:hidden">
         <div>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/" className="text-xs text-gray-400 hover:text-blue-600">← Tous les projets</a>
           <h1 className="text-2xl font-bold tracking-tight">Dépôt de capital · Souscripteurs</h1>
           <p className="text-sm text-gray-500">Remplis les cases, les contrôles passent au vert, puis imprime la liste. Le brouillon est conservé dans ce navigateur.</p>

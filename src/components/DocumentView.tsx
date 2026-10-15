@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { DocModel, Field } from "@/lib/types";
+import type { DocModel, Field, ImageOverlay } from "@/lib/types";
 import { isEdited, isMoved } from "@/lib/types";
 import { DEFAULT_FONT, FONTS } from "@/lib/fonts";
 
@@ -12,9 +12,14 @@ interface Props {
   onChange: (id: string, value: string) => void;
   onMove: (id: string, x: number, y: number) => void;
   onAddAt: (page: number, x: number, y: number) => void;
+  images: ImageOverlay[];
+  selectedImageId: string | null;
+  onSelectImage: (id: string | null) => void;
+  onMoveImage: (id: string, x: number, y: number) => void;
+  onResizeImage: (id: string, w: number, h: number) => void;
 }
 
-export default function DocumentView({ doc, selectedId, addMode, onSelect, onChange, onMove, onAddAt }: Props) {
+export default function DocumentView({ doc, selectedId, addMode, onSelect, onChange, onMove, onAddAt, images, selectedImageId, onSelectImage, onMoveImage, onResizeImage }: Props) {
   return (
     <div className="flex flex-col items-center gap-6 p-6">
       {doc.pages.map((page) => (
@@ -22,12 +27,17 @@ export default function DocumentView({ doc, selectedId, addMode, onSelect, onCha
           key={page.index}
           page={page}
           fields={doc.fields.filter((f) => f.page === page.index)}
+          images={images.filter((im) => im.page === page.index)}
           selectedId={selectedId}
+          selectedImageId={selectedImageId}
           addMode={addMode}
           onSelect={onSelect}
           onChange={onChange}
           onMove={onMove}
           onAddAt={onAddAt}
+          onSelectImage={onSelectImage}
+          onMoveImage={onMoveImage}
+          onResizeImage={onResizeImage}
         />
       ))}
     </div>
@@ -37,18 +47,24 @@ export default function DocumentView({ doc, selectedId, addMode, onSelect, onCha
 function PageView({
   page,
   fields,
+  images,
   selectedId,
+  selectedImageId,
   addMode,
   onSelect,
   onChange,
   onMove,
   onAddAt,
-}: Omit<Props, "doc"> & { page: DocModel["pages"][number]; fields: Field[] }) {
+  onSelectImage,
+  onMoveImage,
+  onResizeImage,
+}: Omit<Props, "doc" | "images"> & { page: DocModel["pages"][number]; fields: Field[]; images: ImageOverlay[] }) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const drag = useRef<{ id: string; sx: number; sy: number; fx: number; fy: number; moved: boolean } | null>(null);
   const justDragged = useRef(false);
+  const imgDrag = useRef<{ id: string; mode: "move" | "resize"; sx: number; sy: number; x: number; y: number; w: number; h: number } | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -78,6 +94,48 @@ function PageView({
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={page.imageUrl} alt={`Page ${page.index + 1}`} className="block h-full w-full select-none" draggable={false} />
+      {images.map((im) => {
+        const sel = im.id === selectedImageId;
+        return (
+          <div
+            key={im.id}
+            onPointerDown={(e) => {
+              if (e.button !== 0) return;
+              e.stopPropagation();
+              onSelectImage(im.id);
+              imgDrag.current = { id: im.id, mode: "move", sx: e.clientX, sy: e.clientY, x: im.x, y: im.y, w: im.w, h: im.h };
+              e.currentTarget.setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              const d = imgDrag.current;
+              if (!d || d.id !== im.id) return;
+              const dx = (e.clientX - d.sx) / scale;
+              const dy = (e.clientY - d.sy) / scale;
+              if (d.mode === "move") onMoveImage(im.id, d.x + dx, d.y + dy);
+              else onResizeImage(im.id, Math.max(10, d.w + dx), Math.max(10, d.h + dy));
+            }}
+            onPointerUp={() => {
+              imgDrag.current = null;
+            }}
+            style={{ left: im.x * scale, top: im.y * scale, width: im.w * scale, height: im.h * scale }}
+            className={`absolute z-[15] cursor-move ${sel ? "ring-2 ring-blue-600" : "ring-1 ring-blue-400/50 hover:ring-blue-600"}`}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={im.dataUrl} alt="" className="pointer-events-none block h-full w-full select-none" draggable={false} />
+            {sel && (
+              <span
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return;
+                  e.stopPropagation();
+                  imgDrag.current = { id: im.id, mode: "resize", sx: e.clientX, sy: e.clientY, x: im.x, y: im.y, w: im.w, h: im.h };
+                  (e.currentTarget.parentElement as HTMLElement).setPointerCapture?.(e.pointerId);
+                }}
+                className="absolute -bottom-1.5 -right-1.5 h-3.5 w-3.5 cursor-nwse-resize rounded-full border border-white bg-blue-600"
+              />
+            )}
+          </div>
+        );
+      })}
       {/* Moved zones: hide the original text where it was. */}
       {fields.filter(isMoved).map((f) => (
         <div
