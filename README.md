@@ -7,11 +7,11 @@ Un seul site Next.js qui héberge plusieurs projets, chacun à sa propre adresse
 | `/` | Page d'accueil (hub) avec une tuile par projet | `src/app/page.tsx` |
 | `/editor` | Smart Document Editor (ci-dessous) | `src/app/editor`, `src/components`, `src/lib` |
 | `/amaz` | Amaz · Générateur de factures, copié **tel quel** depuis le dépôt `amaz` | pages et assets : `public/amaz` ; fonctions : `src/amaz/api` (inchangées), exposées à `/api/extract`, `/api/profil`, `/api/donnees` via `src/lib/nodeHandler.ts` |
-| *(libre)* | Projet 3, tuile réservée sur l'accueil | voir ci-dessous |
+| `/depot` | Dépôt de capital · Souscripteurs : saisie société + souscripteurs, contrôles (total = capital, minimum libéré selon la forme, versé ≤ souscrit), liste imprimable. Équivalent web du classeur Excel ; ce n'est pas un certificat (aucune banque, aucun signataire). | `src/app/depot/page.tsx` |
 
 Variables d'environnement d'Amaz à recopier dans le projet Vercel : `OPENAI_API_KEY` (et `OPENAI_MODEL` en option), `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (ou `KV_REST_API_*`) et `CODE_ACCES`. Voir `src/amaz/README.md`.
 
-### Ajouter un troisième projet
+### Ajouter un autre projet
 
 - **Site statique (HTML/JS/CSS)** : copie-le dans `public/<nom>/`, ajoute une réécriture `/<nom>` → `/<nom>/index.html` dans `next.config.ts`, et une tuile dans `src/app/page.tsx`. Ses fonctions `api/` (style Vercel `(req, res)`) se branchent comme celles d'Amaz : un fichier `src/app/api/<route>/route.ts` de trois lignes avec `adaptNodeHandler`.
 - **Application Next.js** : pose ses pages dans `src/app/<nom>/` et ses routes API dans `src/app/api/<nom>/`.

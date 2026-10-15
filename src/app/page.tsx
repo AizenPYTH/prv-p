@@ -14,6 +14,12 @@ const PROJECTS = [
     description: "Un assistant pose les questions une par une et produit la facture en PDF.",
     tag: "Factures",
   },
+  {
+    href: "/depot",
+    title: "Dépôt de capital · Souscripteurs",
+    description: "Saisie de la société et des souscripteurs, contrôles automatiques, liste imprimable.",
+    tag: "Société",
+  },
 ];
 
 export default function Home() {
@@ -32,10 +38,6 @@ export default function Home() {
             <span className="mt-auto pt-2 text-sm font-medium text-blue-600">Ouvrir →</span>
           </Link>
         ))}
-        <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-gray-300 p-6 text-center text-gray-400">
-          <span className="text-lg font-semibold">Projet 3</span>
-          <span className="text-sm">Bientôt</span>
-        </div>
       </div>
     </main>
   );
