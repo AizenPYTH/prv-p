@@ -64,6 +64,8 @@ export interface Field {
   bold?: boolean;
   /** Background colour sampled from the rendered page, as CSS hex */
   bg: string;
+  /** Colour of the original text sampled from the rendered page, as CSS hex (new value is drawn in it) */
+  color?: string;
   /** Source text segment, used to avoid duplicating zones */
   segmentId?: string;
   /** True for zones created from text that no rule classified (plain editable text) */

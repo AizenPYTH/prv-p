@@ -159,6 +159,7 @@ function PageView({
           fontWeight: f.bold ? 700 : 400,
           fontFamily: FONTS[f.font ?? DEFAULT_FONT].css,
           backgroundColor: modified || editing ? f.bg : undefined,
+          color: f.color ?? "#141414",
         };
         return editing ? (
           <input
@@ -172,7 +173,7 @@ function PageView({
             }}
             onClick={(e) => e.stopPropagation()}
             style={{ ...style, width: Math.max(f.w * scale, f.value.length * f.fontSize * scale * 0.6) }}
-            className="absolute z-20 whitespace-nowrap border-0 px-0 text-[#141414] outline-none ring-2 ring-blue-500"
+            className="absolute z-20 whitespace-nowrap border-0 px-0 outline-none ring-2 ring-blue-500"
           />
         ) : (
           <div
@@ -208,7 +209,7 @@ function PageView({
               setEditingId(f.id);
             }}
             style={style}
-            className={`absolute z-10 cursor-move whitespace-nowrap px-0 text-[#141414] transition-shadow ${
+            className={`absolute z-10 cursor-move whitespace-nowrap px-0 transition-shadow ${
               selected
                 ? "ring-2 ring-blue-600"
                 : modified
