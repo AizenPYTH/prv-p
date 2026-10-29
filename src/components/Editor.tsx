@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Contact, DocModel, Field, ImageOverlay, SavedDoc, SavedValues, Template } from "@/lib/types";
 import { labelKey, uid } from "@/lib/types";
-import { loadImage, loadPdf, RENDER_SCALE, sampleBackground, type RenderedPage } from "@/lib/pdf";
+import { loadImage, loadPdf, RENDER_SCALE, sampleBackground, sampleTextColor, type RenderedPage } from "@/lib/pdf";
 import { ocrCanvas } from "@/lib/ocr";
 import { aiAvailable, classifySegments, contactUpdates } from "@/lib/ai";
 import { exportPdf, downloadBytes } from "@/lib/exportPdf";
@@ -116,7 +116,10 @@ export default function Editor() {
   const withBackgrounds = (fields: Field[], pages: RenderedPage[], kind: "pdf" | "image") =>
     fields.map((f) => {
       const page = pages[f.page];
-      return page ? { ...f, bg: sampleBackground(page.canvas, f, kind === "pdf" ? RENDER_SCALE : 1) } : f;
+      if (!page) return f;
+      const scale = kind === "pdf" ? RENDER_SCALE : 1;
+      const bg = sampleBackground(page.canvas, f, scale);
+      return { ...f, bg, color: sampleTextColor(page.canvas, f, scale, bg) };
     });
 
   const importFile = async (file: File) => {
@@ -191,7 +194,12 @@ export default function Editor() {
         mime: d.mime,
         dataUrl: d.dataUrl,
         pages: pages.map(({ index, width, height, imageUrl }) => ({ index, width, height, imageUrl })),
-        fields: d.fields,
+        // Documents saved before text colours were kept: sample the colour at the zone's original place.
+        fields: d.fields.map((f) =>
+          f.color || !pages[f.page]
+            ? f
+            : { ...f, color: sampleTextColor(pages[f.page].canvas, { ...f, x: f.ox ?? f.x, y: f.oy ?? f.y }, d.kind === "pdf" ? RENDER_SCALE : 1, f.bg) },
+        ),
         images: d.images ?? [],
       });
       setSelectedId(null);
@@ -288,6 +296,7 @@ export default function Editor() {
       fontSize,
       bg: "#ffffff",
       font: near?.font,
+      color: near?.color,
       ox: x,
       oy: y - fontSize * 0.6,
     };

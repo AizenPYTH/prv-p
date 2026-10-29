@@ -191,3 +191,36 @@ export function sampleBackground(
   const [r, g, b] = samples[0];
   return `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
+
+const toHex = (c: number[]) => `#${c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
+
+/** Samples the colour of the text inside a box (the ink pixels that differ most from the background). */
+export function sampleTextColor(
+  canvas: HTMLCanvasElement,
+  box: { x: number; y: number; w: number; h: number },
+  scale: number,
+  bg: string,
+): string | undefined {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return undefined;
+  const x0 = Math.max(0, Math.floor(box.x * scale));
+  const y0 = Math.max(0, Math.floor(box.y * scale));
+  const x1 = Math.min(canvas.width, Math.ceil((box.x + box.w) * scale));
+  const y1 = Math.min(canvas.height, Math.ceil((box.y + box.h) * scale));
+  if (x1 <= x0 || y1 <= y0) return undefined;
+  const d = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(bg);
+  const [br, bgr, bb] = m ? [1, 2, 3].map((i) => parseInt(m[i], 16)) : [255, 255, 255];
+  const ink: { dist: number; c: number[] }[] = [];
+  for (let i = 0; i < d.length; i += 4) {
+    const dist = Math.abs(d[i] - br) + Math.abs(d[i + 1] - bgr) + Math.abs(d[i + 2] - bb);
+    if (dist > 60) ink.push({ dist, c: [d[i], d[i + 1], d[i + 2]] });
+  }
+  if (!ink.length) return undefined;
+  // Anti-aliased edges blend with the paper: keep the most contrasted pixels (glyph cores) and average them.
+  ink.sort((a, b) => b.dist - a.dist);
+  const core = ink.slice(0, Math.max(1, Math.ceil(ink.length * 0.3)));
+  const sum = [0, 0, 0];
+  for (const { c } of core) for (let k = 0; k < 3; k++) sum[k] += c[k];
+  return toHex(sum.map((v) => v / core.length));
+}

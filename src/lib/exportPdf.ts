@@ -91,7 +91,7 @@ function drawField(page: PDFPage, f: Field, font: PDFFont, scale: number, pageHe
       y: top - boxH + (boxH - size) / 2 + size * 0.2,
       size,
       font,
-      color: rgb(0.08, 0.08, 0.08),
+      color: f.color ? hexToRgb(f.color) : rgb(0.08, 0.08, 0.08),
     });
   }
 }
