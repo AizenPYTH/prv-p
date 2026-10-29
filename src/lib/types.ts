@@ -66,6 +66,8 @@ export interface Field {
   bg: string;
   /** Colour of the original text sampled from the rendered page, as CSS hex (new value is drawn in it) */
   color?: string;
+  /** Extra outline width (document units) so the new text is as heavy as the original; set once measured */
+  stroke?: number;
   /** Source text segment, used to avoid duplicating zones */
   segmentId?: string;
   /** True for zones created from text that no rule classified (plain editable text) */

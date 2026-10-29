@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Contact, DocModel, Field, ImageOverlay, SavedDoc, SavedValues, Template } from "@/lib/types";
 import { labelKey, uid } from "@/lib/types";
+import { calibrateField } from "@/lib/calibrate";
 import { loadImage, loadPdf, RENDER_SCALE, sampleBackground, sampleTextColor, type RenderedPage } from "@/lib/pdf";
 import { ocrCanvas } from "@/lib/ocr";
 import { aiAvailable, classifySegments, contactUpdates } from "@/lib/ai";
@@ -113,14 +114,20 @@ export default function Editor() {
     return [page];
   }, []);
 
+  /** Samples background and text colour, then fits size and weight to the original text. */
   const withBackgrounds = (fields: Field[], pages: RenderedPage[], kind: "pdf" | "image") =>
-    fields.map((f) => {
-      const page = pages[f.page];
-      if (!page) return f;
-      const scale = kind === "pdf" ? RENDER_SCALE : 1;
-      const bg = sampleBackground(page.canvas, f, scale);
-      return { ...f, bg, color: sampleTextColor(page.canvas, f, scale, bg) };
-    });
+    Promise.all(
+      fields.map(async (f) => {
+        const page = pages[f.page];
+        if (!page) return f;
+        const scale = kind === "pdf" ? RENDER_SCALE : 1;
+        const box = { ...f, x: f.ox ?? f.x, y: f.oy ?? f.y };
+        const bg = sampleBackground(page.canvas, box, scale);
+        const sampled = { ...f, bg, color: sampleTextColor(page.canvas, box, scale, bg) };
+        const fit = await calibrateField(page.canvas, sampled, scale, kind);
+        return fit ? { ...sampled, ...fit } : { ...sampled, stroke: 0 };
+      }),
+    );
 
   const importFile = async (file: File) => {
     setError(null);
@@ -140,7 +147,7 @@ export default function Editor() {
         mime: kind === "pdf" ? "application/pdf" : file.type,
         dataUrl,
         pages: pages.map(({ index, width, height, imageUrl }) => ({ index, width, height, imageUrl })),
-        fields: withBackgrounds(fields, pages, kind),
+        fields: await withBackgrounds(fields, pages, kind),
         images: [],
       });
       setSelectedId(null);
@@ -165,7 +172,7 @@ export default function Editor() {
         mime: t.mime,
         dataUrl: t.dataUrl,
         pages: pages.map(({ index, width, height, imageUrl }) => ({ index, width, height, imageUrl })),
-        fields: withBackgrounds(
+        fields: await withBackgrounds(
           t.fields.map((f) => ({ ...f, value: f.original })),
           pages,
           t.kind,
@@ -194,11 +201,15 @@ export default function Editor() {
         mime: d.mime,
         dataUrl: d.dataUrl,
         pages: pages.map(({ index, width, height, imageUrl }) => ({ index, width, height, imageUrl })),
-        // Documents saved before text colours were kept: sample the colour at the zone's original place.
-        fields: d.fields.map((f) =>
-          f.color || !pages[f.page]
-            ? f
-            : { ...f, color: sampleTextColor(pages[f.page].canvas, { ...f, x: f.ox ?? f.x, y: f.oy ?? f.y }, d.kind === "pdf" ? RENDER_SCALE : 1, f.bg) },
+        // Documents saved before size, weight and colour were measured: measure them now.
+        fields: await Promise.all(
+          d.fields.map(async (f) => {
+            const page = pages[f.page];
+            if (f.stroke !== undefined || !page) return f;
+            const scale = d.kind === "pdf" ? RENDER_SCALE : 1;
+            const sampled = f.color ? f : { ...f, color: sampleTextColor(page.canvas, { ...f, x: f.ox ?? f.x, y: f.oy ?? f.y }, scale, f.bg) };
+            return { ...sampled, stroke: 0, ...(await calibrateField(page.canvas, sampled, scale, d.kind)) };
+          }),
         ),
         images: d.images ?? [],
       });
