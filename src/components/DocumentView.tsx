@@ -160,6 +160,7 @@ function PageView({
           fontFamily: FONTS[f.font ?? DEFAULT_FONT].css,
           backgroundColor: modified || editing ? f.bg : undefined,
           color: f.color ?? "#141414",
+          WebkitTextStroke: f.stroke ? `${f.stroke * scale}px ${f.color ?? "#141414"}` : undefined,
         };
         return editing ? (
           <input

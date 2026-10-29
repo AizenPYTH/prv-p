@@ -1,5 +1,17 @@
 "use client";
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import {
+  PDFDocument,
+  StandardFonts,
+  TextRenderingMode,
+  popGraphicsState,
+  pushGraphicsState,
+  rgb,
+  setLineWidth,
+  setStrokingRgbColor,
+  setTextRenderingMode,
+  type PDFFont,
+  type PDFPage,
+} from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { DocModel, Field } from "./types";
 import { isEdited, isMoved } from "./types";
@@ -86,13 +98,25 @@ function drawField(page: PDFPage, f: Field, font: PDFFont, scale: number, pageHe
     });
   }
   if (text) {
+    const color = f.color ? hexToRgb(f.color) : rgb(0.08, 0.08, 0.08);
+    // Text heavier than the embedded face: fill and outline it, as measured on the original.
+    const stroke = (f.stroke ?? 0) * scale;
+    if (stroke > 0) {
+      page.pushOperators(
+        pushGraphicsState(),
+        setTextRenderingMode(TextRenderingMode.FillAndOutline),
+        setLineWidth(stroke),
+        setStrokingRgbColor(color.red, color.green, color.blue),
+      );
+    }
     page.drawText(text, {
       x,
       y: top - boxH + (boxH - size) / 2 + size * 0.2,
       size,
       font,
-      color: f.color ? hexToRgb(f.color) : rgb(0.08, 0.08, 0.08),
+      color,
     });
+    if (stroke > 0) page.pushOperators(popGraphicsState());
   }
 }
 
